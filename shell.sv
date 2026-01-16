@@ -26,6 +26,8 @@ BSCANE2 #(.JTAG_CHAIN(JTAG_USER_ID)) bscan_i (
         .SHIFT(shift_dr),
         .UPDATE(update_dr));
 
+assign tdo = tdi;
+
 logic conf_clk, axss_valid;
 axss_t axss_data;
 
