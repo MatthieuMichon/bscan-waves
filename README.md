@@ -28,13 +28,48 @@ After powerup:
 
 The following shows activity on the JTAG interface (likely from an ILA capture running in background). Noticed that although `ir_is_user` is low there is activity on all other signals expect `drck`.
 
+The sequence is as follows:
+- `run_test_idle` / `select_dr_scan` / `select_ir_scan` / `test_logic_reset`
+- pause (approx 2x tck cycle long), cycle tck 4x, pause (approx 2x tck cycle long)
+- cycle tck 4x, pause (approx 2x tck cycle long)
+- `run_test_idle` / `select_dr_scan` / `capture_dr`
+- Large number of data are received (disregard `TDO` for it is a simple copy of `TDI`)
+
 ![](bscane2_no_ir_is_user_activity.png)
+
+The following waveform shows activity corresponding to the host (PC) sending `0x0a` (new-line) with the following commands:
+
+```tcl
+open_hw_manager
+connect_hw_server
+open_hw_target -jtag_mode on
+set zynq7_ir_length 10
+set zynq7_ir_user4 0x3e3
+run_state_hw_jtag RESET
+run_state_hw_jtag IDLE
+scan_ir_hw_jtag $zynq7_ir_length -tdi $zynq7_ir_user4
+set zynq7_dr_length_byte 9
+set new_line 0x0a
+scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $new_line
+close_hw_target
+# The ILA GUI displays the waveform once the hw_target is released.
+# This suppose some sort of polling is running in background, explaining the 
+# activity mentioned above.
+```
+
+Notice that `DRCK` does not toggle when `UPDATE` is pulsed (conversely it toggles when `CAPTURE` is pulsed), meaning that any logic clocked by this clock will not register the `UPDATE` event. Thus `DRCK` can only be used for serializing data into `TDO`.
+
+Deserializing data therefore requires using `TCK` and `SEL`, begging the question of why is `DRCK` even present in the first place.
+
+![](bscane2_sel_received_0x0a.png)
 
 # Lessons Learnt
 
 - Always check that the BSCANE2 instance is selected by ensuring its `SEL` output is asserted.
   - All JTAG and TAP FSM state signals are driven regardless of the instruction register (IR) values.
   - Designs relying on the BSCANE2 outputs without checking the value of `SEL` may experience undefined behavior.
+- Output signals of the BSCANE2 primitive are updated on the falling edge of `tck`.
+
 
 # Usage
 
