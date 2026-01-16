@@ -13,8 +13,8 @@ The description of this primitive in the user-guide UG470 is a touch light:
 | TDI          | `tdi`              | Output from external TAP pin | Xilinx's description is somewhat misleading since the TDI is connected to the `tdo` output of the ARM DAP and not to the `tdi` package pin |
 | TDO          | `tdo`              | Input to a flip-flop that registers the primitive input on the falling edge of TCK | Didn't find timing details on this input |
 | SEL          | `ir_is_user`       | Asserted when IR matches USERx | Confirmed |
-| DRCK         | `drck`             | Gated TCK output when SEL is asserted, DRCK toggles when CAPTURE or SHIFT are asserted | To be checked |
-| RESET        | `test_logic_reset` | TAP controller is in Test-Logic-Reset state | Not confirmed |
+| DRCK         | `drck`             | Gated TCK output when SEL is asserted, DRCK toggles when CAPTURE or SHIFT are asserted | Confirmed, misses `UPDATE` state thus useless for deserialization |
+| RESET        | `test_logic_reset` | TAP controller is in Test-Logic-Reset state | Confirmed, clears the `SEL` (`ir_is_user`) output |
 | RUNTEST      | `run_test_idle`    | TAP controller is in Run-Test/Idle state | Confirmed |
 | CAPTURE      | `capture_dr`       | TAP controller is in Capture-DR state | Confirmed |
 | SHIFT        | `shift_dr`         | TAP controller is in Shift-DR state | Confirmed |
@@ -45,11 +45,10 @@ connect_hw_server
 open_hw_target -jtag_mode on
 set zynq7_ir_length 10
 set zynq7_ir_user4 0x3e3
-run_state_hw_jtag RESET
-run_state_hw_jtag IDLE
-scan_ir_hw_jtag $zynq7_ir_length -tdi $zynq7_ir_user4
 set zynq7_dr_length_byte 9
 set new_line 0x0a
+run_state_hw_jtag RESET
+scan_ir_hw_jtag $zynq7_ir_length -tdi $zynq7_ir_user4
 scan_dr_hw_jtag $zynq7_dr_length_byte -tdi $new_line
 close_hw_target
 # The ILA GUI displays the waveform once the hw_target is released.
